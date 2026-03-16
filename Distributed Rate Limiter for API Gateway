@@ -1,0 +1,87 @@
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+class TokenBucket {
+
+    int maxTokens;
+    double refillRate;
+    double tokens;
+    long lastRefillTime;
+
+    TokenBucket(int maxTokens, int refillPerHour) {
+        this.maxTokens = maxTokens;
+        this.refillRate = refillPerHour / 3600.0;
+        this.tokens = maxTokens;
+        this.lastRefillTime = System.currentTimeMillis();
+    }
+
+    synchronized boolean allowRequest() {
+        refill();
+        if (tokens >= 1) {
+            tokens -= 1;
+            return true;
+        }
+        return false;
+    }
+
+    private void refill() {
+        long now = System.currentTimeMillis();
+        double seconds = (now - lastRefillTime) / 1000.0;
+        double refill = seconds * refillRate;
+
+        if (refill > 0) {
+            tokens = Math.min(maxTokens, tokens + refill);
+            lastRefillTime = now;
+        }
+    }
+
+    int remainingTokens() {
+        refill();
+        return (int) tokens;
+    }
+
+    int usedTokens() {
+        return maxTokens - remainingTokens();
+    }
+}
+
+class RateLimiter {
+
+    private ConcurrentHashMap<String, TokenBucket> clients = new ConcurrentHashMap<>();
+    private final int LIMIT = 1000;
+
+    public String checkRateLimit(String clientId) {
+
+        clients.putIfAbsent(clientId, new TokenBucket(LIMIT, LIMIT));
+        TokenBucket bucket = clients.get(clientId);
+
+        if (bucket.allowRequest()) {
+            return "Allowed (" + bucket.remainingTokens() + " requests remaining)";
+        } else {
+            return "Denied (0 requests remaining)";
+        }
+    }
+
+    public String getRateLimitStatus(String clientId) {
+
+        clients.putIfAbsent(clientId, new TokenBucket(LIMIT, LIMIT));
+        TokenBucket bucket = clients.get(clientId);
+
+        return "{used: " + bucket.usedTokens() +
+                ", limit: " + LIMIT +
+                ", remaining: " + bucket.remainingTokens() + "}";
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        RateLimiter limiter = new RateLimiter();
+
+        System.out.println(limiter.checkRateLimit("abc123"));
+        System.out.println(limiter.checkRateLimit("abc123"));
+        System.out.println(limiter.checkRateLimit("abc123"));
+
+        System.out.println(limiter.getRateLimitStatus("abc123"));
+    }
+}
