@@ -1,0 +1,136 @@
+import java.util.*;
+
+class Transaction {
+    int id;
+    int amount;
+    String merchant;
+    String account;
+    long time;
+
+    Transaction(int id, int amount, String merchant, String account, long time) {
+        this.id = id;
+        this.amount = amount;
+        this.merchant = merchant;
+        this.account = account;
+        this.time = time;
+    }
+}
+
+class FraudDetector {
+
+    public List<int[]> findTwoSum(List<Transaction> tx, int target) {
+        Map<Integer, Transaction> map = new HashMap<>();
+        List<int[]> result = new ArrayList<>();
+
+        for (Transaction t : tx) {
+            int complement = target - t.amount;
+            if (map.containsKey(complement)) {
+                result.add(new int[]{map.get(complement).id, t.id});
+            }
+            map.put(t.amount, t);
+        }
+
+        return result;
+    }
+
+    public List<int[]> findTwoSumWithTimeWindow(List<Transaction> tx, int target, long windowMillis) {
+        Map<Integer, Transaction> map = new HashMap<>();
+        List<int[]> result = new ArrayList<>();
+
+        for (Transaction t : tx) {
+            int complement = target - t.amount;
+
+            if (map.containsKey(complement)) {
+                Transaction prev = map.get(complement);
+                if (Math.abs(t.time - prev.time) <= windowMillis) {
+                    result.add(new int[]{prev.id, t.id});
+                }
+            }
+
+            map.put(t.amount, t);
+        }
+
+        return result;
+    }
+
+    public List<List<Integer>> findKSum(int[] nums, int k, int target) {
+        List<List<Integer>> res = new ArrayList<>();
+        Arrays.sort(nums);
+        kSumHelper(nums, 0, k, target, new ArrayList<>(), res);
+        return res;
+    }
+
+    private void kSumHelper(int[] nums, int start, int k, int target,
+                            List<Integer> path, List<List<Integer>> res) {
+
+        if (k == 2) {
+            Map<Integer, Integer> map = new HashMap<>();
+            for (int i = start; i < nums.length; i++) {
+                int complement = target - nums[i];
+                if (map.containsKey(complement)) {
+                    List<Integer> temp = new ArrayList<>(path);
+                    temp.add(nums[i]);
+                    temp.add(complement);
+                    res.add(temp);
+                }
+                map.put(nums[i], i);
+            }
+            return;
+        }
+
+        for (int i = start; i < nums.length; i++) {
+            path.add(nums[i]);
+            kSumHelper(nums, i + 1, k - 1, target - nums[i], path, res);
+            path.remove(path.size() - 1);
+        }
+    }
+
+    public Map<String, List<String>> detectDuplicates(List<Transaction> tx) {
+        Map<String, List<String>> map = new HashMap<>();
+
+        for (Transaction t : tx) {
+            String key = t.amount + "_" + t.merchant;
+            map.putIfAbsent(key, new ArrayList<>());
+            map.get(key).add(t.account);
+        }
+
+        Map<String, List<String>> result = new HashMap<>();
+
+        for (Map.Entry<String, List<String>> e : map.entrySet()) {
+            if (new HashSet<>(e.getValue()).size() > 1) {
+                result.put(e.getKey(), e.getValue());
+            }
+        }
+
+        return result;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        List<Transaction> transactions = new ArrayList<>();
+
+        transactions.add(new Transaction(1, 500, "StoreA", "acc1", 1000));
+        transactions.add(new Transaction(2, 300, "StoreB", "acc2", 1500));
+        transactions.add(new Transaction(3, 200, "StoreC", "acc3", 2000));
+        transactions.add(new Transaction(4, 500, "StoreA", "acc4", 2500));
+
+        FraudDetector fd = new FraudDetector();
+
+        List<int[]> pairs = fd.findTwoSum(transactions, 500);
+        for (int[] p : pairs)
+            System.out.println("TwoSum Pair: " + p[0] + ", " + p[1]);
+
+        List<int[]> timePairs = fd.findTwoSumWithTimeWindow(transactions, 500, 3600000);
+        for (int[] p : timePairs)
+            System.out.println("TimeWindow Pair: " + p[0] + ", " + p[1]);
+
+        int[] amounts = {500, 300, 200};
+        List<List<Integer>> ksum = fd.findKSum(amounts, 3, 1000);
+        System.out.println("KSum: " + ksum);
+
+        Map<String, List<String>> dup = fd.detectDuplicates(transactions);
+        System.out.println("Duplicates: " + dup);
+    }
+}
