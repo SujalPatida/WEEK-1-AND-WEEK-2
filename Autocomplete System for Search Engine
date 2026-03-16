@@ -1,0 +1,84 @@
+import java.util.*;
+
+class TrieNode {
+    Map<Character, TrieNode> children = new HashMap<>();
+    boolean isEnd = false;
+    int frequency = 0;
+}
+
+class AutocompleteSystem {
+
+    private TrieNode root = new TrieNode();
+    private HashMap<String, Integer> frequencyMap = new HashMap<>();
+
+    public void addQuery(String query) {
+        frequencyMap.put(query, frequencyMap.getOrDefault(query, 0) + 1);
+
+        TrieNode node = root;
+        for (char c : query.toCharArray()) {
+            node.children.putIfAbsent(c, new TrieNode());
+            node = node.children.get(c);
+        }
+        node.isEnd = true;
+        node.frequency = frequencyMap.get(query);
+    }
+
+    public List<String> search(String prefix) {
+
+        TrieNode node = root;
+        for (char c : prefix.toCharArray()) {
+            if (!node.children.containsKey(c))
+                return new ArrayList<>();
+            node = node.children.get(c);
+        }
+
+        PriorityQueue<Map.Entry<String, Integer>> pq =
+                new PriorityQueue<>((a, b) -> b.getValue() - a.getValue());
+
+        List<String> results = new ArrayList<>();
+        dfs(node, prefix, pq);
+
+        int k = 0;
+        while (!pq.isEmpty() && k < 10) {
+            results.add(pq.poll().getKey());
+            k++;
+        }
+
+        return results;
+    }
+
+    private void dfs(TrieNode node, String current,
+                     PriorityQueue<Map.Entry<String, Integer>> pq) {
+
+        if (node.isEnd) {
+            pq.add(new AbstractMap.SimpleEntry<>(current, node.frequency));
+        }
+
+        for (char c : node.children.keySet()) {
+            dfs(node.children.get(c), current + c, pq);
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        AutocompleteSystem system = new AutocompleteSystem();
+
+        system.addQuery("java tutorial");
+        system.addQuery("javascript");
+        system.addQuery("java download");
+        system.addQuery("java tutorial");
+        system.addQuery("java 21 features");
+
+        List<String> suggestions = system.search("jav");
+
+        int rank = 1;
+        for (String s : suggestions) {
+            System.out.println(rank + ". " + s);
+            rank++;
+        }
+
+        system.addQuery("java 21 features");
+    }
+}
