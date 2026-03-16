@@ -1,0 +1,106 @@
+import java.util.*;
+
+class VideoData {
+    String videoId;
+    String content;
+
+    VideoData(String videoId, String content) {
+        this.videoId = videoId;
+        this.content = content;
+    }
+}
+
+class LRUCache<K,V> extends LinkedHashMap<K,V> {
+    private int capacity;
+
+    LRUCache(int capacity) {
+        super(capacity, 0.75f, true);
+        this.capacity = capacity;
+    }
+
+    protected boolean removeEldestEntry(Map.Entry<K,V> eldest) {
+        return size() > capacity;
+    }
+}
+
+class MultiLevelCache {
+
+    private LRUCache<String, VideoData> L1 = new LRUCache<>(10000);
+    private LRUCache<String, VideoData> L2 = new LRUCache<>(100000);
+    private HashMap<String, VideoData> L3 = new HashMap<>();
+
+    private HashMap<String, Integer> accessCount = new HashMap<>();
+
+    int l1Hits=0, l2Hits=0, l3Hits=0;
+
+    public MultiLevelCache() {
+        for(int i=1;i<=20;i++)
+            L3.put("video_"+i, new VideoData("video_"+i,"Content_"+i));
+    }
+
+    public VideoData getVideo(String id) {
+
+        if(L1.containsKey(id)){
+            l1Hits++;
+            return L1.get(id);
+        }
+
+        if(L2.containsKey(id)){
+            l2Hits++;
+            VideoData v = L2.get(id);
+            promoteToL1(id,v);
+            return v;
+        }
+
+        if(L3.containsKey(id)){
+            l3Hits++;
+            VideoData v = L3.get(id);
+            L2.put(id,v);
+            accessCount.put(id,1);
+            return v;
+        }
+
+        return null;
+    }
+
+    private void promoteToL1(String id, VideoData v){
+        int count = accessCount.getOrDefault(id,0)+1;
+        accessCount.put(id,count);
+        if(count>2)
+            L1.put(id,v);
+    }
+
+    public void invalidate(String id){
+        L1.remove(id);
+        L2.remove(id);
+    }
+
+    public void getStatistics(){
+        int total=l1Hits+l2Hits+l3Hits;
+
+        double l1Rate=(total==0)?0:(l1Hits*100.0/total);
+        double l2Rate=(total==0)?0:(l2Hits*100.0/total);
+        double l3Rate=(total==0)?0:(l3Hits*100.0/total);
+
+        System.out.println("L1 Hit Rate: "+l1Rate+"%");
+        System.out.println("L2 Hit Rate: "+l2Rate+"%");
+        System.out.println("L3 Hit Rate: "+l3Rate+"%");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        MultiLevelCache cache = new MultiLevelCache();
+
+        System.out.println(cache.getVideo("video_5").content);
+        System.out.println(cache.getVideo("video_5").content);
+        System.out.println(cache.getVideo("video_5").content);
+
+        System.out.println(cache.getVideo("video_15").content);
+
+        cache.invalidate("video_5");
+
+        cache.getStatistics();
+    }
+}
