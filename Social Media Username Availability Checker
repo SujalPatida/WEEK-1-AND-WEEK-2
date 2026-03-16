@@ -1,0 +1,68 @@
+import java.util.*;
+
+class UsernameChecker {
+
+    private HashMap<String, Integer> users = new HashMap<>();
+    private HashMap<String, Integer> attempts = new HashMap<>();
+    private int idCounter = 1;
+
+    public void registerUser(String username) {
+        users.put(username, idCounter++);
+    }
+
+    public boolean checkAvailability(String username) {
+        attempts.put(username, attempts.getOrDefault(username, 0) + 1);
+        return !users.containsKey(username);
+    }
+
+    public List<String> suggestAlternatives(String username) {
+        List<String> suggestions = new ArrayList<>();
+
+        for (int i = 1; i <= 3; i++) {
+            String s = username + i;
+            if (!users.containsKey(s))
+                suggestions.add(s);
+        }
+
+        String dotVersion = username.replace("_", ".");
+        if (!users.containsKey(dotVersion))
+            suggestions.add(dotVersion);
+
+        return suggestions;
+    }
+
+    public String getMostAttempted() {
+        String maxUser = null;
+        int max = 0;
+
+        for (Map.Entry<String, Integer> entry : attempts.entrySet()) {
+            if (entry.getValue() > max) {
+                max = entry.getValue();
+                maxUser = entry.getKey();
+            }
+        }
+
+        return maxUser + " (" + max + " attempts)";
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        UsernameChecker checker = new UsernameChecker();
+
+        checker.registerUser("john_doe");
+        checker.registerUser("admin");
+
+        System.out.println("john_doe available: " + checker.checkAvailability("john_doe"));
+        System.out.println("jane_smith available: " + checker.checkAvailability("jane_smith"));
+
+        System.out.println("Suggestions for john_doe: " + checker.suggestAlternatives("john_doe"));
+
+        checker.checkAvailability("admin");
+        checker.checkAvailability("admin");
+        checker.checkAvailability("admin");
+
+        System.out.println("Most attempted username: " + checker.getMostAttempted());
+    }
+}
