@@ -1,0 +1,69 @@
+import java.util.*;
+
+class PlagiarismDetector {
+
+    private int N = 5;
+    private HashMap<String, Set<String>> index = new HashMap<>();
+    private HashMap<String, Set<String>> documentGrams = new HashMap<>();
+
+    public void addDocument(String docId, String text) {
+        String[] words = text.toLowerCase().split("\\s+");
+        Set<String> grams = new HashSet<>();
+
+        for (int i = 0; i <= words.length - N; i++) {
+            StringBuilder gram = new StringBuilder();
+            for (int j = 0; j < N; j++)
+                gram.append(words[i + j]).append(" ");
+            String g = gram.toString().trim();
+            grams.add(g);
+
+            index.putIfAbsent(g, new HashSet<>());
+            index.get(g).add(docId);
+        }
+
+        documentGrams.put(docId, grams);
+    }
+
+    public void analyzeDocument(String docId) {
+        Set<String> grams = documentGrams.get(docId);
+        HashMap<String, Integer> matchCount = new HashMap<>();
+
+        for (String gram : grams) {
+            Set<String> docs = index.get(gram);
+            if (docs != null) {
+                for (String d : docs) {
+                    if (!d.equals(docId))
+                        matchCount.put(d, matchCount.getOrDefault(d, 0) + 1);
+                }
+            }
+        }
+
+        for (Map.Entry<String, Integer> e : matchCount.entrySet()) {
+            String otherDoc = e.getKey();
+            int matches = e.getValue();
+            double similarity = (matches * 100.0) / grams.size();
+
+            System.out.println("Matched with " + otherDoc +
+                    " → " + matches + " n-grams → Similarity: " +
+                    String.format("%.2f", similarity) + "%");
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        PlagiarismDetector detector = new PlagiarismDetector();
+
+        detector.addDocument("essay_089",
+                "data structures and algorithms are important in computer science");
+
+        detector.addDocument("essay_092",
+                "data structures and algorithms are important in computer science and software engineering");
+
+        detector.addDocument("essay_123",
+                "data structures and algorithms are important in computer science");
+
+        detector.analyzeDocument("essay_123");
+    }
+}
